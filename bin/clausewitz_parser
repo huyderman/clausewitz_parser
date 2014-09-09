@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/../lib')
+
+require 'yaml'
+require 'clausewitz_parser'
+
+parser = ClauswitzParser::ClauswitzParser.new
+
+ARGF.set_encoding('iso-8859-1')
+content = ARGF.read
+#content.encode! 'utf-8', 'iso-8859-1', {invalid: :replace, universal_newline: true}
+results = parser.parse(content)
+
+if results
+    puts results.to_h.to_yaml
+else
+    raise parser.failure_reason
+end

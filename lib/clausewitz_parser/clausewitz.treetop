@@ -1,0 +1,157 @@
+module ClausewitzParser
+  grammar Clausewitz
+
+    rule root    
+      wsp* map:pairs? wsp* {
+        def value
+          map.value
+        end
+      }
+    end
+
+    rule object
+      '{' wsp? content:(pairs / array)? wsp? '}' {
+          def value
+            content.value unless content.empty?
+          end
+      }
+    end
+
+    rule array
+      first:simple_value rest:(wsp simple_value)* {
+        def value
+          to_a
+        end
+
+        def to_a
+          rest.elements.map(&:simple_value).map(&:value).unshift(first.value)
+        end
+      }
+    end
+
+    rule pairs
+      first:pair rest:(wsp pair)* {
+        def value
+          to_pairs
+        end
+
+        def to_pairs
+          CrusaderKings2::Pairs.new rest.elements.map(&:pair).map(&:value).unshift(first.value)
+        end
+      }
+    end
+
+    rule pair
+      pair_key:simple_value wsp? '=' wsp? pair_value:complex_value {
+        def value
+          to_pair
+        end
+
+        def to_pair
+          CrusaderKings2::Pair.new pair_key.value, pair_value.value
+        end
+      }
+    end
+
+    rule simple_value
+      date / number / boolean / string
+    end
+
+    rule complex_value
+      object / simple_value
+    end
+
+    rule number
+      float / integer
+    end
+
+    rule integer
+      '-'? [\d]+ {
+        def value
+          to_i
+        end
+
+        def to_i
+          text_value.to_i
+        end
+      }    
+    end
+
+    rule float
+      '-'? [\d]+ '.' [\d]+ {
+        def value
+          to_f
+        end
+
+        def to_f
+          text_value.to_f
+        end
+      }
+    end
+
+    rule boolean
+      bool:('yes' / 'no') &([[:space:]}]) {
+        def value
+          to_b
+        end
+
+        def to_b
+          case bool.text_value
+            when 'yes' then return true
+            when 'no' then return false
+          end
+        end
+      }
+    end
+
+    rule string
+      quoted_string / unquoted_string
+    end
+
+    rule quoted_string
+      '"' contents:(!'"' .)* '"' {
+        def value
+          to_s
+        end
+
+        def to_s 
+          contents.text_value
+        end
+      }
+    end
+
+    rule unquoted_string
+      (![[:space:]"{}] .)+ {
+        def value
+          to_s
+        end
+
+        def to_s
+          text_value
+        end
+      }
+    end
+
+    rule date
+      year:([\d])+ '.' month:([\d])+ '.' day:([\d])+ {
+        def value
+          to_date
+        end
+
+        def to_date
+          Date.new year.text_value.to_i,
+                   month.text_value.to_i,
+                   day.text_value.to_i
+        end
+      }
+    end
+
+    rule wsp
+      ([[:space:]] / comment)+
+    end
+
+    rule comment
+      '#' (![\n] .)*
+    end
+  end
+end
